@@ -1,0 +1,143 @@
+{
+  "name": "fix-imports",
+  "displayName": "Fix Imports",
+  "description": "Clean up misplaced imports nested in functions, loops, and try/except blocks by moving them to the top header.",
+  "version": "0.1.0",
+  "publisher": "antigravity",
+  "icon": "resources/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tanmoy-debnath/fix-imports"
+  },
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Formatters",
+    "Linters"
+  ],
+  "keywords": [
+    "imports",
+    "fix imports",
+    "python",
+    "typescript",
+    "javascript",
+    "refactoring",
+    "clean code",
+    "tree-sitter",
+    "ast"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onLanguage:python",
+    "onLanguage:javascript",
+    "onLanguage:typescript",
+    "onLanguage:javascriptreact",
+    "onLanguage:typescriptreact"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "fixImports.fixImports",
+        "title": "Fix Imports",
+        "category": "Fix Imports"
+      },
+      {
+        "command": "fixImports.fixAllInFile",
+        "title": "Fix All Imports in File",
+        "category": "Fix Imports"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "fixImports.fixImports",
+          "group": "1_modification@5",
+          "when": "editorTextFocus && !editorReadonly"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "fixImports.fixImports",
+          "when": "editorTextFocus"
+        },
+        {
+          "command": "fixImports.fixAllInFile",
+          "when": "editorTextFocus"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "fixImports.fixImports",
+        "key": "ctrl+alt+i",
+        "mac": "cmd+alt+i",
+        "when": "editorTextFocus && !editorReadonly"
+      }
+    ],
+    "configuration": {
+      "title": "Fix Imports",
+      "properties": {
+        "fixImports.preserveConditionalImports": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "typing",
+            "TYPE_CHECKING",
+            "sys.version_info",
+            "sys.platform"
+          ],
+          "description": "Module names, symbols, or condition keywords that indicate intentional conditional imports that should NOT be moved."
+        },
+        "fixImports.sortImportsAfterMove": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically sort moved imports alphabetically at the top header."
+        },
+        "fixImports.groupByOrigin": {
+          "type": "boolean",
+          "default": true,
+          "description": "Group imports by origin (stdlib, third-party, local) when inserting at the top."
+        },
+        "fixImports.enableDiagnostics": {
+          "type": "boolean",
+          "default": true,
+          "description": "Display warning squiggles and quick fixes on misplaced imports."
+        },
+        "fixImports.python.insertPassOnEmptyBlock": {
+          "type": "boolean",
+          "default": true,
+          "description": "Insert 'pass' in Python blocks (such as try/except or if) that would otherwise become empty after moving imports, preventing IndentationError."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "node esbuild.js --production",
+    "watch": "node esbuild.js --watch",
+    "test": "tsx test/runAllTests.ts",
+    "package": "npm run build && vsce package --no-dependencies",
+    "publish:marketplace": "vsce publish",
+    "publish:openvsx": "ovsx publish"
+  },
+  "dependencies": {
+    "tree-sitter-wasms": "^0.1.13",
+    "web-tree-sitter": "0.20.8"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.6",
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.80.0",
+    "@vscode/vsce": "^3.9.2",
+    "esbuild": "^0.20.0",
+    "mocha": "^10.4.0",
+    "ovsx": "^1.2.0",
+    "tsx": "^4.7.1",
+    "typescript": "^5.3.3"
+  }
+}
