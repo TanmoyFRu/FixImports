@@ -1,33 +1,38 @@
 {
   "name": "fix-imports",
   "displayName": "Fix Imports",
-  "description": "Clean up misplaced imports nested in functions, loops, and try/except blocks by moving them to the top header.",
+  "description": "Finds and fixes imports that AI coding assistants (Copilot, Cursor, Claude) leave stranded inside functions, try/except blocks, and loops.",
   "version": "0.1.0",
   "publisher": "antigravity",
   "icon": "resources/icon.png",
+  "galleryBanner": {
+    "color": "#1e2327",
+    "theme": "dark"
+  },
   "repository": {
     "type": "git",
-    "url": "https://github.com/TanmoyFRu/NoMoreWrongImports.git"
+    "url": "https://github.com/TanmoyFRu/NoMoreWrongImports"
   },
+  "bugs": {
+    "url": "https://github.com/TanmoyFRu/NoMoreWrongImports/issues"
+  },
+  "homepage": "https://github.com/TanmoyFRu/NoMoreWrongImports#readme",
+  "qna": "https://github.com/TanmoyFRu/NoMoreWrongImports/issues",
   "license": "MIT",
   "engines": {
     "vscode": "^1.80.0"
   },
   "categories": [
-    "Programming Languages",
+    "Linters",
     "Formatters",
-    "Linters"
+    "Other"
   ],
   "keywords": [
-    "imports",
-    "fix imports",
+    "import",
     "python",
     "typescript",
-    "javascript",
-    "refactoring",
-    "clean code",
-    "tree-sitter",
-    "ast"
+    "linter",
+    "ai"
   ],
   "main": "./dist/extension.js",
   "activationEvents": [
@@ -121,9 +126,9 @@
     "build": "node esbuild.js --production",
     "watch": "node esbuild.js --watch",
     "test": "tsx test/runAllTests.ts",
-    "package": "npm run build && vsce package --no-dependencies",
-    "publish:marketplace": "vsce publish",
-    "publish:openvsx": "ovsx publish"
+    "package": "npm run build && npx @vscode/vsce package --no-dependencies",
+    "publish:marketplace": "npx @vscode/vsce publish",
+    "publish:openvsx": "npx ovsx publish"
   },
   "dependencies": {
     "tree-sitter-wasms": "^0.1.13",
