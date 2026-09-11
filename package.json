@@ -3,7 +3,7 @@
   "displayName": "Fix Imports",
   "description": "Finds and fixes imports that AI coding assistants (Copilot, Cursor, Claude) leave stranded inside functions, try/except blocks, and loops.",
   "version": "0.1.0",
-  "publisher": "antigravity",
+  "publisher": "TanmoyFRu",
   "icon": "resources/icon.png",
   "galleryBanner": {
     "color": "#1e2327",

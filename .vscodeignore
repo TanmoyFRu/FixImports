@@ -10,3 +10,5 @@ esbuild.js
 **/*.map
 node_modules/**
 !node_modules/web-tree-sitter/**
+resources/social-preview.png
+examples/**

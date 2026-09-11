@@ -1,7 +1,7 @@
 # Fix Imports
 
-[![VS Code Marketplace](https://img.shields.io/badge/VS%20Code-Marketplace-blue.svg)](https://marketplace.visualstudio.com/items?itemName=antigravity.fix-imports)
-[![Open VSX](https://img.shields.io/badge/Open%20VSX-Registry-purple.svg)](https://open-vsx.org/extension/antigravity/fix-imports)
+[![VS Code Marketplace](https://img.shields.io/badge/VS%20Code-Marketplace-blue.svg)](https://marketplace.visualstudio.com/items?itemName=TanmoyFRu.fix-imports)
+[![Open VSX](https://img.shields.io/badge/Open%20VSX-Registry-purple.svg)](https://open-vsx.org/extension/TanmoyFRu/fix-imports)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 Fix Imports is an AST-powered VS Code extension that detects and moves imports stranded inside functions, try/except blocks, and loops by AI coding assistants like GitHub Copilot, Cursor, and Claude cleanly up to the top header of your file.
