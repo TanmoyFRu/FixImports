@@ -1,8 +1,41 @@
 import * as vscode from 'vscode';
-import { FixImportsConfig, FoundImport, TextEditOperation } from './types';
+import { FixImportsConfig, FoundImport, TextEditOperation, SourcePosition, SourceRange } from './types';
 import { ParserRegistry } from '../parsers';
 import { EditPlanner } from './EditPlanner';
 import { getConfiguration } from '../config/settings';
+
+function isPositionBeforeOrEqual(a: SourcePosition, b: SourcePosition): boolean {
+  if (a.line !== b.line) {
+    return a.line < b.line;
+  }
+  return a.character <= b.character;
+}
+
+function rangesOverlap(a: SourceRange, b: SourceRange): boolean {
+  const aEndsBeforeBStarts = isPositionBeforeOrEqual(a.end, b.start);
+  const bEndsBeforeAStarts = isPositionBeforeOrEqual(b.end, a.start);
+  return !aEndsBeforeBStarts && !bEndsBeforeAStarts;
+}
+
+function normalizeRange(input: any): SourceRange | undefined {
+  if (!input || typeof input !== 'object') {
+    return undefined;
+  }
+  if (!input.start || !input.end) {
+    return undefined;
+  }
+  if (typeof input.start.line !== 'number' || typeof input.end.line !== 'number') {
+    return undefined;
+  }
+  // Check if range is empty (single cursor point with no highlighted selection)
+  if (input.start.line === input.end.line && input.start.character === input.end.character) {
+    return undefined;
+  }
+  return {
+    start: { line: input.start.line, character: input.start.character ?? 0 },
+    end: { line: input.end.line, character: input.end.character ?? 0 }
+  };
+}
 
 export class ImportFixer {
   private registry: ParserRegistry;
@@ -16,7 +49,7 @@ export class ImportFixer {
    */
   async fixImports(
     document: vscode.TextDocument,
-    selection?: vscode.Range,
+    selection?: any,
     customConfig?: FixImportsConfig
   ): Promise<{ applied: boolean; count: number }> {
     const config = customConfig || getConfiguration();
@@ -28,21 +61,15 @@ export class ImportFixer {
     // Filter imports that should be moved
     let importsToMove: FoundImport[];
 
-    const hasSelection = selection && !selection.isEmpty;
+    const validSelection = normalizeRange(selection);
 
-    if (hasSelection) {
+    if (validSelection) {
       // User selected a specific block: only fix misplaced imports overlapping the selection
       importsToMove = allImports.filter(imp => {
         if (imp.scope !== 'nested' || imp.isConditional) {
           return false;
         }
-        const impRange = new vscode.Range(
-          imp.range.start.line,
-          imp.range.start.character,
-          imp.range.end.line,
-          imp.range.end.character
-        );
-        return selection.intersection(impRange) !== undefined || selection.contains(impRange);
+        return rangesOverlap(imp.range, validSelection);
       });
     } else {
       // Whole file: fix all misplaced, non-conditional imports

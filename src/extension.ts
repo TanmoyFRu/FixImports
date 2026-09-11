@@ -25,16 +25,37 @@ export async function activate(context: vscode.ExtensionContext) {
 
   const fixer = new ImportFixer(registry);
 
+function isRange(arg: unknown): arg is vscode.Range {
+  return (
+    typeof arg === 'object' &&
+    arg !== null &&
+    'start' in arg &&
+    'end' in arg &&
+    typeof (arg as any).start?.line === 'number' &&
+    typeof (arg as any).end?.line === 'number'
+  );
+}
+
   // Command: Fix Imports (runs on selection or whole file if nothing selected)
   const fixImportsCommand = vscode.commands.registerCommand(
     'fixImports.fixImports',
-    async (explicitRange?: vscode.Range) => {
+    async (arg?: unknown) => {
       const editor = vscode.window.activeTextEditor;
       if (!editor) {
         return;
       }
 
-      const selection = explicitRange || (editor.selection.isEmpty ? undefined : editor.selection);
+      // If arg is a Range (e.g. from QuickFix CodeAction), use it.
+      // Otherwise, check if user has an active highlighted selection in the editor.
+      // If no text is selected (or cursor only), target the whole file.
+      let selection: vscode.Range | undefined;
+      if (isRange(arg)) {
+        selection = arg;
+      } else if (editor.selection && !editor.selection.isEmpty) {
+        selection = editor.selection;
+      } else {
+        selection = undefined;
+      }
 
       try {
         const result = await fixer.fixImports(editor.document, selection);
