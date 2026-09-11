@@ -1,53 +1,161 @@
-# Fix Imports
+# Fix Imports (NoMoreWrongImports)
 
 [![VS Code Marketplace](https://img.shields.io/badge/VS%20Code-Marketplace-blue.svg)](https://marketplace.visualstudio.com/items?itemName=antigravity.fix-imports)
 [![Open VSX](https://img.shields.io/badge/Open%20VSX-Registry-purple.svg)](https://open-vsx.org/extension/antigravity/fix-imports)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Fix Imports is a Visual Studio Code extension that detects import statements placed outside the top header block (such as inside function bodies, loops, or try/except blocks) and moves them up to the top of the file alongside other imports.
+An AST-powered VS Code extension that instantly detects and cleans up misplaced imports injected inside functions, loops, and code blocks by AI coding assistants.
 
-Detection is AST-based via `web-tree-sitter` (WebAssembly), running natively within the extension host without external subprocesses or regex fragility.
+---
+
+## Why This Exists: The AI Agent Problem
+
+If you use AI coding assistants (Copilot, Cursor, Claude, ChatGPT, Devin, or local LLMs), you have seen this pattern:
+
+You prompt the AI to fix a specific function or implement a quick method. Because AI models operate on local diffs and token-limited context windows, they frequently take the path of least resistance: **they insert `import` statements directly inside the function body or inside a nested block**, rather than navigating to the top of your file.
+
+```python
+# What the AI agent leaves behind:
+
+def process_transaction(payload):
+    import json               # Injected by AI
+    import requests           # Injected by AI
+    
+    try:
+        data = json.loads(payload)
+        import math           # Injected by AI inside a block
+        return math.ceil(data["amount"])
+    except Exception as e:
+        logger.error(e)
+```
+
+This pollutes codebases with:
+- Imports scattered across logical layers and functions.
+- Redundant and duplicate imports already declared at the file header.
+- Repeated performance hits in interpreted loops.
+- Style violations that fail linters (PEP 8, ESLint, Flake8).
+
+Manually fixing this requires scrolling to line 1, checking whether each import already exists, merging duplicates, maintaining order conventions, scrolling back down, deleting the old line, and ensuring the remaining block does not fail with an `IndentationError`.
+
+**Fix Imports automates this entirely.** With one hotkey (`Ctrl+Alt+I` / `Cmd+Alt+I`) or right-click, it extracts rogue imports from your selection (or whole file), moves them to the top header, deduplicates against existing imports, sorts them, and leaves the remaining code syntactically valid.
+
+---
+
+## Before and After
+
+### Python Example
+
+#### Before (AI-Generated Snippet)
+```python
+#!/usr/bin/env python3
+"""Main service runner."""
+from __future__ import annotations
+import os
+
+def calculate_metric(data):
+    import math
+    return math.sqrt(data.value)
+
+def send_notification(user_id, message):
+    try:
+        import requests
+    except Exception:
+        pass
+```
+
+#### After running Fix Imports (`Ctrl+Alt+I`)
+```python
+#!/usr/bin/env python3
+"""Main service runner."""
+from __future__ import annotations
+import math
+import os
+
+import requests
+
+def calculate_metric(data):
+    return math.sqrt(data.value)
+
+def send_notification(user_id, message):
+    try:
+        pass
+    except Exception:
+        pass
+```
+*Notice: `from __future__` remains at the top, imports are categorized into standard library and third-party, and the empty `try` block receives a `pass` statement to prevent an `IndentationError`.*
+
+---
+
+### TypeScript / JavaScript Example
+
+#### Before (AI-Generated Snippet)
+```typescript
+"use client";
+
+import React from 'react';
+
+export function UserProfile({ id }: { id: string }) {
+    import { formatCurrency } from './utils/format';
+    const path = require('path');
+
+    return <div>{formatCurrency(100)}</div>;
+}
+```
+
+#### After running Fix Imports
+```typescript
+"use client";
+
+import path from 'path';
+import React from 'react';
+import { formatCurrency } from './utils/format';
+
+export function UserProfile({ id }: { id: string }) {
+    return <div>{formatCurrency(100)}</div>;
+}
+```
+*Notice: Directives like `"use client"` remain above the moved imports, while ES imports and CommonJS requires are hoisted cleanly.*
 
 ---
 
 ## Features
 
-- **AST-Based Detection**: Uses WebAssembly tree-sitter grammars to parse syntax trees accurately rather than relying on regex approximations.
-- **Conditional Import Preservation**: Automatically preserves intentional fallback patterns, such as:
-  ```python
-  try:
-      import ujson as json
-  except (ImportError, ModuleNotFoundError):
-      import json
-  ```
-  Also preserves typing guards (`if TYPE_CHECKING:`) and version/platform checks (`if sys.version_info >= (3, 10):`).
-- **Python Syntax Safety**: When removing a nested import leaves an indented Python block (`try`, `except`, `if`, `def`) empty, the extension automatically inserts an indented `pass` statement to prevent `IndentationError`.
-- **Header Insertion Rules**:
-  - **Python**: Respects shebang lines (`#!/...`), encoding declarations, module docstrings (`"""..."""`), and ensures `from __future__ import ...` statements always remain at the very top.
-  - **JavaScript / TypeScript**: Respects shebangs, license headers, and directives (`"use client";`, `"use server";`, `"use strict";`).
-- **Extensible Architecture**: Language support is decoupled through a modular `LanguageParser` interface and central parser registry.
-- **Selection and Whole-File Scope**: Run on selected code blocks or execute across the entire document.
-- **Diagnostics and Quick Fixes**: Provides optional warning squiggles and inline Quick Fix actions (`Cmd+.` / `Ctrl+.`).
-- **Configurable Sorting and Grouping**: Optionally sort moved imports alphabetically and group them by origin (standard library, third-party, local).
+- **True AST Parsing (Zero Regex Fragility)**: Built on `web-tree-sitter` (WebAssembly). Parses the concrete syntax tree in-process with zero external command-line dependencies or Python/Node subshell requirements.
+- **Distinguishes AI Mistakes from Intentional Fallbacks**:
+  - AI agents often nest imports out of laziness. However, some nested imports are deliberate—such as compatibility fallbacks:
+    ```python
+    try:
+        import ujson as json
+    except (ImportError, ModuleNotFoundError):
+        import json
+    ```
+    Fix Imports inspects exception types in AST `except` blocks. If an exception handles `ImportError` or `ModuleNotFoundError`, or is guarded by `if TYPE_CHECKING:`, it is recognized as intentional and **preserved in place**.
+- **Syntax-Safe Code Deletions**: If moving an import leaves an indented Python block (`def`, `if`, `try`, `except`) with no remaining statements, the extension automatically injects an indented `pass` statement so your code continues to run without syntax errors.
+- **Header Insertion Intelligence**:
+  - **Python**: Honors shebangs (`#!/...`), encoding cookies, module docstrings (`"""..."""`), and keeps `from __future__ import ...` statements above all other code.
+  - **JavaScript / TypeScript**: Honors shebangs, license headers, and directives (`"use client";`, `"use server";`, `"use strict";`).
+- **Selection & File Scopes**: Highlight only the code block touched by the AI agent to fix just that block, or run across the entire file.
+- **Deduplication and Grouping**: Skips imports that are already imported at the top level, groups by origin (standard library, third-party, local), and sorts alphabetically.
+- **Inline Quick Fixes**: Highlights misplaced imports with subtle warnings and provides one-click Quick Fix options (`Cmd+.` / `Ctrl+.`).
 
 ---
 
 ## Usage
 
-### Context Menu
-Select a block of code (or right-click anywhere in the editor) and select **Fix Imports**.
+### 1. Right-Click Context Menu
+Select the code block edited by the AI agent (or right-click anywhere in the file) and select **Fix Imports**.
 
-### Keyboard Shortcut
+### 2. Keyboard Shortcut
 - **Linux / Windows**: `Ctrl+Alt+I`
 - **macOS**: `Cmd+Alt+I`
 
-### Command Palette
-Open the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`) and choose:
-- `Fix Imports: Fix Imports` (operates on the active selection or the entire file if nothing is selected)
-- `Fix Imports: Fix All Imports in File`
+### 3. Command Palette
+Open the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`):
+- `Fix Imports: Fix Imports`: Fixes imports inside your current selection, or whole file if nothing is selected.
+- `Fix Imports: Fix All Imports in File`: Fixes all misplaced imports across the active document.
 
-### Quick Fix (Code Action)
-When diagnostics are enabled, hover over any highlighted misplaced import and click the lightbulb icon or press `Cmd+.` / `Ctrl+.`:
+### 4. Quick Fix (Code Action)
+Hover over any yellow warning underline on an import statement and press `Cmd+.` or `Ctrl+.`:
 - **Fix Import: Move to top of file**
 - **Fix all misplaced imports in file**
 
@@ -55,11 +163,11 @@ When diagnostics are enabled, hover over any highlighted misplaced import and cl
 
 ## Configuration
 
-The extension can be configured via VS Code settings (`settings.json`):
+Customizable via VS Code `settings.json`:
 
 ```jsonc
 {
-  // Module names, symbols, or condition keywords that indicate intentional conditional imports to preserve
+  // Keywords, modules, or symbols that identify intentional conditional imports to preserve
   "fixImports.preserveConditionalImports": [
     "typing",
     "TYPE_CHECKING",
@@ -67,16 +175,16 @@ The extension can be configured via VS Code settings (`settings.json`):
     "sys.platform"
   ],
 
-  // Automatically sort moved imports alphabetically at the top header
+  // Automatically sort moved imports alphabetically
   "fixImports.sortImportsAfterMove": true,
 
-  // Group imports by origin (stdlib, third-party, local) when inserting at the top
+  // Group imports by origin (stdlib, third-party, local)
   "fixImports.groupByOrigin": true,
 
   // Display warning squiggles and quick fixes on misplaced imports
   "fixImports.enableDiagnostics": true,
 
-  // Insert 'pass' in Python blocks that would otherwise become empty after moving imports
+  // Automatically insert 'pass' in Python blocks that would otherwise become empty
   "fixImports.python.insertPassOnEmptyBlock": true
 }
 ```
@@ -85,75 +193,60 @@ The extension can be configured via VS Code settings (`settings.json`):
 
 ## Supported Languages
 
-| Language | AST Parser | Capabilities |
+| Language | AST Parser | Supported Features |
 |---|---|---|
-| **Python** (`.py`) | `tree-sitter-python.wasm` | Full AST parsing, deliberate conditional import detection, automatic `pass` insertion |
-| **TypeScript** (`.ts`, `.tsx`) | `tree-sitter-typescript.wasm` | ES imports, CommonJS `require()` declarations, directive preservation |
-| **JavaScript** (`.js`, `.jsx`) | `tree-sitter-typescript.wasm` | ES imports, CommonJS `require()` declarations, directive preservation |
-| **Other Languages** | `RegexFallbackParser` | Line-by-line regex fallback when no registered grammar exists |
+| **Python** (`.py`) | `tree-sitter-python.wasm` | Full AST, deliberate fallback detection (`try/except ImportError`), `pass` injection, `__future__` preservation |
+| **TypeScript** (`.ts`, `.tsx`) | `tree-sitter-typescript.wasm` | ES imports, CommonJS `require()`, directive preservation (`"use client"`, `"use server"`) |
+| **JavaScript** (`.js`, `.jsx`) | `tree-sitter-typescript.wasm` | ES imports, CommonJS `require()`, directive preservation (`"use strict"`) |
+| **Other Languages** | `RegexFallbackParser` | Line-by-line fallback when no AST grammar is registered |
 
 ---
 
 ## Architecture
+
+Fix Imports is designed with a decoupled, extensible architecture. Adding support for a new language requires only implementing the `LanguageParser` interface:
 
 ```
 fix-imports/
 ├── src/
 │   ├── extension.ts              # Activation, commands, CodeActions, and Diagnostics
 │   ├── core/
-│   │   ├── ImportFixer.ts        # Orchestrator — calls language parser & applies edits
-│   │   ├── EditPlanner.ts        # Computes minimal TextEdits, pass insertion & sorting
+│   │   ├── ImportFixer.ts        # Orchestrator — coordinates parser and applies workspace edits
+│   │   ├── EditPlanner.ts        # Computes TextEdits, indentation, dedupe, pass injection
 │   │   └── types.ts              # Core interfaces (FoundImport, InsertionPoint, Config)
 │   ├── parsers/
 │   │   ├── LanguageParser.ts     # Common interface for all language parsers
-│   │   ├── PythonParser.ts       # Tree-sitter Python AST parser
-│   │   ├── TypeScriptParser.ts   # Tree-sitter JS/TS AST parser
-│   │   ├── RegexFallbackParser.ts# Fallback parser for unregistered file types
+│   │   ├── PythonParser.ts       # Web-tree-sitter Python parser
+│   │   ├── TypeScriptParser.ts   # Web-tree-sitter JS/TS parser
+│   │   ├── RegexFallbackParser.ts# Last-resort regex fallback
 │   │   └── index.ts              # Central parser registry & WASM manager
 │   ├── config/
-│   │   └── settings.ts           # Settings reader with defaults
+│   │   └── settings.ts           # Type-safe configuration reader
 │   └── ui/
-│       ├── CodeActions.ts        # CodeActionProvider for inline Quick Fixes
-│       └── Diagnostics.ts       # DiagnosticCollection with debounced reporting
+│       ├── CodeActions.ts        # VS Code CodeActionProvider for inline Quick Fixes
+│       └── Diagnostics.ts       # Real-time debounced diagnostics
 ├── dist/
-│   ├── extension.js              # Bundled extension code
-│   └── wasm/                     # Tree-sitter WebAssembly binaries
-├── test/                         # Test suites (Python, TypeScript, EditPlanner, fixtures)
-└── .github/workflows/            # CI testing and dual marketplace release workflows
+│   ├── extension.js              # High-performance bundled extension artifact
+│   └── wasm/                     # Tree-sitter WebAssembly grammar binaries
+└── .github/workflows/            # Automated CI test and dual marketplace release workflows
 ```
 
 ---
 
 ## Development
 
-### Setup
 ```bash
+# Install dependencies
 npm install
-```
 
-### Build
-Bundles the extension using `esbuild` and copies the WebAssembly grammar binaries to `dist/wasm/`:
-```bash
+# Build extension and bundle WASM binaries
 npm run build
-```
 
-### Test
-Executes unit and integration test suites:
-```bash
+# Run unit and integration tests (23 tests across Python, TS, and EditPlanner)
 npm test
-```
 
-### Package (.vsix)
-Generates the `.vsix` distribution bundle:
-```bash
+# Package .vsix
 npm run package
-```
-
-### Publishing
-Automated via `.github/workflows/publish.yml` upon pushing a version tag (e.g. `v0.1.0`), or manually via:
-```bash
-npm run publish:marketplace
-npm run publish:openvsx
 ```
 
 ---
