@@ -2,6 +2,12 @@
 
 All notable changes to the "fix-imports" extension will be documented in this file.
 
+## [0.1.1] - 2026-09-11
+
+### Fixed
+- Fixed context menu execution error (`TypeError: r.intersection is not a function`) when right-clicking files in the editor.
+- Added strict type checking for editor selection arguments and robust boundary overlap calculation.
+
 ## [0.1.0] - 2026-09-11
 
 ### Added

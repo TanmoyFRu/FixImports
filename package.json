@@ -2,7 +2,7 @@
   "name": "fix-imports",
   "displayName": "Fix Imports",
   "description": "Finds and fixes imports that AI coding assistants (Copilot, Cursor, Claude) leave stranded inside functions, try/except blocks, and loops.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "TanmoyFRu",
   "icon": "resources/icon.png",
   "galleryBanner": {
